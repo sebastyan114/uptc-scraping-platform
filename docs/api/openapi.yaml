@@ -1,0 +1,136 @@
+openapi: 3.1.0
+info:
+  title: Web Scanner API
+  version: "0.1.0"
+  license:
+    name: Uso interno del proyecto
+    identifier: UNLICENSED
+servers:
+  - url: /
+    description: Mismo origen; nginx (producción) o Vite (desarrollo) reenvían /api al backend
+security: []   # MVP sin login: se declara explícito, no se deja ambiguo
+
+paths:
+  /api/analyses:
+    post:
+      operationId: createAnalysis
+      summary: Iniciar un nuevo análisis (RF06, RF09, RF23)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetUrl]
+              properties:
+                targetUrl: { type: string, format: uri }
+      responses:
+        "201":
+          description: Análisis creado y encolado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Analysis" }
+        "409":
+          description: Ya existe un análisis en curso (RN01, RN14)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+        "422":
+          description: URL con formato inválido o bloqueada por la protección SSRF (RNF11)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/ProblemDetail" }
+
+  /api/analyses/{analysisId}:
+    parameters:
+      - name: analysisId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getAnalysis
+      summary: Consultar el detalle de un análisis
+      responses:
+        "200":
+          description: Detalle del análisis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisDetail"
+        "404":
+          description: Análisis no encontrado
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+
+components:
+  schemas:
+    AnalysisStatus:
+      type: string
+      description: Estados posibles de un análisis
+      enum: [pending, running, completed, failed]
+
+    ProtectionType:
+      type: string
+      enum: [waf, proxy, captcha, rate_limiting]
+
+    ProblemDetail:
+      description: Formato de error único para toda la API (RFC 7807)
+      type: object
+      required: [title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+
+    Analysis:
+      description: Resumen de un análisis, tal como se ve en el historial (RF20)
+      type: object
+      required: [id, targetUrl, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        targetUrl: { type: string, format: uri }
+        status: { $ref: "#/components/schemas/AnalysisStatus" }
+        createdAt: { type: string, format: date-time }
+        finishedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    AnalysisDetail:
+      description: Analysis + resultados completos (RF21, RF22)
+      allOf:
+        - $ref: "#/components/schemas/Analysis"
+        - type: object
+          properties:
+            protections:
+              type: array
+              items: { $ref: "#/components/schemas/ProtectionFinding" }
+            vulnerabilities:
+              type: array
+              items: { $ref: "#/components/schemas/VulnerabilityFinding" }
+            errorMessage:
+              type: ["string", "null"]
+              description: Mensaje para RNF09-11 cuando status=failed
+
+    ProtectionFinding:
+      description: Detalle de una protección detectada
+      type: object
+      required: [type]
+      properties:
+        type: { $ref: "#/components/schemas/ProtectionType" }
+        details: { type: string }
+
+    VulnerabilityFinding:
+      description: Detalle de una vulnerabilidad encontrada
+      type: object
+      required: [type, severity, description]
+      properties:
+        type: { type: string }
+        severity: 
+          type: string
+          enum: [low, medium, high, critical]
+        description: { type: string }
