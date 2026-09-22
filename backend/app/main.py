@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from qdrant_client import AsyncQdrantClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from app.api.analyses import router as analyses_router
 
 from app.core.config import get_settings
 
@@ -22,7 +23,7 @@ app = FastAPI(
     ),
     version=settings.app_version,
 )
-
+app.include_router(analyses_router)
 
 @app.get("/")
 async def root() -> dict[str, str]:

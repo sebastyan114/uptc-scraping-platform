@@ -91,3 +91,16 @@ Dentro de Docker Compose, el backend se conecta a otros servicios por el nombre 
 DATABASE_URL=postgresql+asyncpg://websec_user:websec_password@postgres:5432/websec
 QDRANT_URL=http://qdrant:6333
 ```
+
+#Contrato OpenAPI
+
+El contrato de la API se encuentra en:
+
+```text
+docs/api/openapi.yaml
+```
+
+La documentación interactiva se puede consultar en:
+
+- Swagger: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc

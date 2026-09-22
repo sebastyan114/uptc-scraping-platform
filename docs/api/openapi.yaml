@@ -46,7 +46,25 @@ paths:
       - name: analysisId
         in: path
         required: true
-        schema: { type: string, format: uuid }
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getAnalysis
+      summary: Consultar el detalle de un análisis
+      responses:
+        "200":
+          description: Detalle del análisis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisDetail"
+        "404":
+          description: Análisis no encontrado
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
 
 components:
   schemas:
