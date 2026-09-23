@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "codegen:api": "openapi-typescript ../docs/api/openapi.yaml -o src/lib/api/schema.d.ts"
+    "codegen:api": "openapi-typescript ../docs/api/openapi.yaml -o src/lib/api/schema.d.ts",
+    "verify:mocks": "tsx --tsconfig tsconfig.scripts.json src/mocks/smoke.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -28,7 +29,14 @@
     "openapi-fetch": "^0.17.0",
     "openapi-typescript": "^7.13.0",
     "oxlint": "^1.81.0",
+    "msw": "^2.10.2",
+    "tsx": "^4.19.4",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
   }
 }
