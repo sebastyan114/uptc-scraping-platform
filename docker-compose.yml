@@ -2,55 +2,63 @@ services:
   backend:
     build:
       context: ./backend
-    container_name: uptc-backend
+    container_name: backend
     ports:
-      - "8000:8000"
-    env_file:
-      - .env
+      - "${BACKEND_PORT:-8000}:${BACKEND_PORT:-8000}"
+    environment:
+      PORT: ${BACKEND_PORT:-8000}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - ./backend:/app
+      - nuclei_templates:/home/app/nuclei-templates
+      - ${NUCLEI_CONFIG_DIR}:/home/app/.config/nuclei
     depends_on:
       postgres:
         condition: service_healthy
       qdrant:
         condition: service_started
     networks:
-      - uptc-network
+      - app_network
 
   postgres:
     image: postgres:16
-    container_name: uptc-postgres
+    container_name: postgres
     environment:
-      POSTGRES_DB: websec
-      POSTGRES_USER: websec_user
-      POSTGRES_PASSWORD: websec_password
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U websec_user -d websec"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
     networks:
-      - uptc-network
+      - app_network
 
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: uptc-qdrant
+    container_name: qdrant
     ports:
-      - "6333:6333"
-      - "6334:6334"
+      - "${QDRANT_PORT:-6333}:6333"
+      - "${QDRANT_METRICS_PORT:-6334}:6334"
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
-      - uptc-network
+      - app_network
 
 volumes:
+  nuclei_templates:
   postgres_data:
   qdrant_data:
 
 networks:
-  uptc-network:
+  app_network:
     driver: bridge
