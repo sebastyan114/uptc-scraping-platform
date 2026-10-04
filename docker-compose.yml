@@ -15,7 +15,7 @@ services:
     volumes:
       - ./backend:/app
       - nuclei_templates:/home/app/nuclei-templates
-      - ${NUCLEI_CONFIG_DIR}:/home/app/.config/nuclei
+      - ./nuclei/config/config.yml:/home/app/.config/nuclei/nuclei.config.yml:ro
     depends_on:
       postgres:
         condition: service_healthy
