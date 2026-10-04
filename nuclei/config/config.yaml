@@ -1,0 +1,29 @@
+# Lista de templates a ejecutar (inclusión)
+type: http,ssl,dns
+severity: critical,high,medium
+tags: exposure,cve,vuln,misconfig
+
+# Lista negra de templates (exclusión)
+exclude-type: code,javascript,headless
+exclude-tags: dos,fuzz,intrusive
+exclude-severity: info
+
+# Rendimiento y carga sobre el objetivo
+rate-limit: 150          # peticiones/seg totales
+concurrency: 25          # templates en paralelo
+bulk-size: 25            # hosts en paralelo
+timeout: 5               # seg por petición
+retries: 1
+max-host-error: 2        # abandona hosts que no responden
+
+# Comportamiento de red
+disable-redirects: true
+no-interactsh: false     # false = interactsh ACTIVO (envía payloads OOB a un servidor externo)
+
+# Formato de salida
+timestamp: true
+omit-raw: false          # incluye request/response
+omit-template: true      # no incluye el template codificado
+
+# Operación
+disable-update-check: true
