@@ -9,7 +9,7 @@ from app.db.models import (
     Finding,
     Job,
     Protection,
-    ScanAuthorization,
+    Authorization,
     ScanLog,
     User,
 )

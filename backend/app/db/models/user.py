@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime
+from datetime import datetime,timezone
 
-from sqlalchemy import DateTime, String, Text
+from sqlalchemy import DateTime, String, Text, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -18,7 +18,7 @@ class User(Base):
         default=uuid.uuid4,
     )
 
-    username: Maped[str]=mapped_column(
+    username: Mapped[str]=mapped_column(
         String(100),
         nullable=False,
         unique=True,

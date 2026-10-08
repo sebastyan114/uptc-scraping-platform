@@ -36,7 +36,7 @@ class Analysis(Base):
         String(50),
         nullable=True,
     )
-    scan_mode: Maped[str]=mapped_column(
+    scan_mode: Mapped[str]=mapped_column(
         String(20),
         nullable=False,
         default="passive",

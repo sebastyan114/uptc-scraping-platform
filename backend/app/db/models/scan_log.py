@@ -1,7 +1,8 @@
 import uuid
-from datetime import datetime
+from datetime import datetime,timezone
 
 from sqlalchemy import DateTime, String, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,7 +20,7 @@ class ScanLog(Base):
 
     analysis_id: Mapped[uuid.UUID]=mapped_column(
         UUID(as_uuid=True),
-        ForeingKey("analyses.id", ondelete="CASCADE"),
+        ForeignKey("analyses.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )

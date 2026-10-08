@@ -1,5 +1,5 @@
 from app.db.models.analysis import Analysis
-from app.db.models.authorization import ScanAuthorization
+from app.db.models.authorization import Authorization
 from app.db.models.finding import Finding
 from app.db.models.job import Job
 from app.db.models.protection import Protection
@@ -11,7 +11,7 @@ __all__ = [
     "Finding",
     "Job",
     "Protection",
-    "ScanAuthorization",
+    "Authorization",
     "ScanLog",
     "User",
 ]
