@@ -24,3 +24,7 @@ class ScanFailed(ScanError):
 
 class ScanTimeout(ScanError, ExecutionTimeout):
     """Se superó el tiempo máximo por objetivo. Los hallazgos previos ya fueron entregados."""
+
+
+class ResultParseError(ScanError):
+    """Un resultado del motor no se pudo parsear correctamente."""
