@@ -27,4 +27,6 @@ scan_reports/
 
 .vscode/settings.json
 
-.idea/*
+*/.idea/*
+
+*/node_modules/
