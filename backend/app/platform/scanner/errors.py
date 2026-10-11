@@ -1,7 +1,7 @@
-from secplatform.core.errors import ExecutionTimeout, PlatformError
+from app.core.errors import ExecutionTimeout, AppError
 
 
-class ScanError(PlatformError):
+class ScanError(AppError):
     """Errores propios del módulo scanner."""
 
 

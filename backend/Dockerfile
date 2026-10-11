@@ -28,7 +28,7 @@ ENV HOME=/home/app
 WORKDIR /app
 
 # Descarga de templates de nuclei en su ubicación por defecto ($HOME/nuclei-templates)
-RUN nuclei -update-templates -silent
+RUN nuclei -update-templates -v
 
 # Instalación de dependencias (capa separada del código para aprovechar cache de build)
 COPY --chown=app:app requirements.txt .
