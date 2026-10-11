@@ -12,6 +12,7 @@ from pydantic import AnyUrl, AwareDatetime, BaseModel, Field
 
 class AnalysisStatus(Enum):
     pending = 'pending'
+    queued = "queued"
     running = 'running'
     completed = 'completed'
     failed = 'failed'
