@@ -11,6 +11,7 @@ env/
 
 #Cache de python
 __pycache__/
+*.py[cod]
 #Ignorar cache de alembic
 
 alembic/__pycache__/
@@ -26,6 +27,7 @@ scan_reports/
 *.log
 
 .vscode/settings.json
+
 
 .idea/
 
