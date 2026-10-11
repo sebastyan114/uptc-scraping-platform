@@ -11,8 +11,6 @@ from app.db.base import Base
 class Analysis(Base):
     __tablename__="analyses"
 
-    
-
     id: Mapped[uuid.UUID]=mapped_column(
         UUID(as_uuid=True),
         primary_key=True,

@@ -104,3 +104,36 @@ La documentación interactiva se puede consultar en:
 
 - Swagger: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
+
+
+Base de datos y migraciones
+
+La estructura de PosgresSQL se administra con Alembic debido a la necesidad y posible modificacion de la base de datos sin afectar los datos 
+
+### Primera instalación
+
+1. Crear el archivo de entorno:
+Copy-Item .env.example .env
+
+
+
+
+2. Levantar los servicios:
+docker compose up -d postgres qdrant backend
+
+3. Activar el entorno virtual:
+.\venv\Scripts\Activate.ps1
+
+4. Configurar el path del backend para Alembic:
+$env:PYTHONPATH=".\backend"
+
+5. Aplicar las migraciones:
+alembic upgrade head
+
+
+### Verificar tablas
+docker compose exec postgres psql -U websec_user -d websec -c "\dt"
+
+
+
+
