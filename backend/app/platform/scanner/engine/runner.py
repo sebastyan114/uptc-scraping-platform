@@ -20,8 +20,8 @@ _LINE_LIMIT = 16 * 1024 * 1024
 # de la aplicación. Sin HOME/XDG_CONFIG_HOME no encuentra su configuración.
 _ENV_WHITELIST = ("PATH", "HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "TMPDIR")
 
-_TERM_GRACE_SECONDS = 5  # espera tras SIGTERM antes de SIGKILL
-_DRAIN_GRACE_SECONDS = 2  # espera al cierre de stderr tras terminar el proceso
+_TERM_GRACE_SECONDS = 5.0  # espera tras SIGTERM antes de SIGKILL
+_DRAIN_GRACE_SECONDS = 2.0  # espera al cierre de stderr tras terminar el proceso
 
 
 def _signal_group(proc: asyncio.subprocess.Process, sig: int) -> None:
@@ -51,6 +51,34 @@ class EngineRunner:
     Solo Unix: termina al motor y a sus hijos mediante grupos de procesos.
     """
 
+    def __init__(self) -> None:
+        # Tareas de cierre en curso. asyncio solo guarda referencias débiles a las tareas,
+        # así que se retienen aquí hasta que terminen.
+        self._shutdowns: set[asyncio.Task] = set()
+
+    async def _finish_shutdown(self, proc: asyncio.subprocess.Process, drain: asyncio.Task) -> None:
+        """Completa el cierre del motor: espera su salida y fuerza SIGKILL si no llega a tiempo."""
+        try:
+            await asyncio.wait_for(proc.wait(), _TERM_GRACE_SECONDS)
+        except TimeoutError:
+            _signal_group(proc, signal.SIGKILL)
+            await proc.wait()
+        except asyncio.CancelledError:
+            _signal_group(proc, signal.SIGKILL)
+            raise
+        finally:
+            drain.cancel()
+
+    def _schedule_shutdown(self, proc: asyncio.subprocess.Process, drain: asyncio.Task) -> None:
+        """Envía SIGTERM y delega el resto del cierre a una tarea en segundo plano.
+
+        Es síncrona a propósito: sin puntos de espera, una cancelación no puede interrumpirla.
+        """
+        _signal_group(proc, signal.SIGTERM)
+        task = asyncio.create_task(self._finish_shutdown(proc, drain))
+        self._shutdowns.add(task)
+        task.add_done_callback(self._shutdowns.discard)
+
     async def stream(self, cmd: Sequence[str], timeout: int) -> AsyncIterator[dict]:
         """Lanza `cmd` y emite cada línea JSONL de stdout como dict, en tiempo real.
 
@@ -71,7 +99,7 @@ class EngineRunner:
 
         env = {k: os.environ[k] for k in _ENV_WHITELIST if k in os.environ}
         proc = await asyncio.create_subprocess_exec(
-            binary,*args,
+            binary, *args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             limit=_LINE_LIMIT,
@@ -80,8 +108,6 @@ class EngineRunner:
         )
         assert proc.stdout is not None and proc.stderr is not None
 
-        # stderr se lee siempre en una tarea aparte: si el pipe se llena, el motor se
-        # bloquea al escribir. Solo se conservan las últimas 30 líneas, para diagnosticar fallos.
         stderr_tail: deque[str] = deque(maxlen=30)
 
         async def drain_stderr() -> None:
@@ -93,13 +119,17 @@ class EngineRunner:
         deadline = loop.time() + timeout
         timeout_msg = f"Superado el límite de {timeout}s"
 
-        def time_left() -> float:
-            return max(deadline - loop.time(), 0)
+        def remaining() -> float:
+            left = deadline - loop.time()
+            if left <= 0:
+                raise ScanTimeout(timeout_msg)
+            return left
 
         try:
             while True:
+                left = remaining()
                 try:
-                    line = await asyncio.wait_for(proc.stdout.readline(), time_left())
+                    line = await asyncio.wait_for(proc.stdout.readline(), left)
                 except TimeoutError:
                     raise ScanTimeout(timeout_msg) from None
                 except ValueError:
@@ -108,29 +138,28 @@ class EngineRunner:
 
                 if not line:  # EOF: el motor cerró stdout
                     break
+
                 result = _decode(line)
                 if result is not None:
                     yield result
 
-            try:
-                code = await asyncio.wait_for(proc.wait(), time_left())
-            except TimeoutError:
-                raise ScanTimeout(timeout_msg) from None
-
-            # Un proceso hijo puede mantener stderr abierto: no esperar indefinidamente
-            with contextlib.suppress(TimeoutError):
-                await asyncio.wait_for(drain, _DRAIN_GRACE_SECONDS)
+            if proc.returncode is not None:
+                code = proc.returncode
+            else:
+                try:
+                    code = await asyncio.wait_for(proc.wait(), remaining())
+                except TimeoutError:
+                    raise ScanTimeout(timeout_msg) from None
 
             if code != 0:
+                # stderr solo se necesita para el diagnóstico; no se espera en un éxito
+                grace = min(_DRAIN_GRACE_SECONDS, max(deadline - loop.time(), 0))
+                if grace > 0:
+                    with contextlib.suppress(TimeoutError):
+                        await asyncio.wait_for(drain, grace)
                 raise ScanFailed(code, "\n".join(stderr_tail))
         finally:
             if proc.returncode is None:
-                # Cierre en dos fases: SIGTERM permite al motor terminar de forma ordenada;
-                # si no responde en _TERM_GRACE_SECONDS, SIGKILL lo fuerza.
-                _signal_group(proc, signal.SIGTERM)
-                try:
-                    await asyncio.wait_for(proc.wait(), _TERM_GRACE_SECONDS)
-                except TimeoutError:
-                    _signal_group(proc, signal.SIGKILL)
-                    await proc.wait()
-            drain.cancel()
+                self._schedule_shutdown(proc, drain)
+            else:
+                drain.cancel()
