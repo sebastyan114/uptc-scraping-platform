@@ -37,7 +37,9 @@ export const handlers = [
         if (hasActiveAnalysis()) {
             return problem(409, 'Análisis en curso', 'Ya hay un análisis en ejecución. Espera a que termine.')
         }
+
         return HttpResponse.json(createAnalysis(body.targetUrl), { status: 201 })
+
     }),
 
     http.get('*/api/analyses/:analysisId', ({ params }) => {
