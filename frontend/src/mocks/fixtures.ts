@@ -4,8 +4,11 @@ import type { components } from '@/lib/api/schema'
 type AnalysisDetail = components['schemas']['AnalysisDetail']
 const store = new Map<string, AnalysisDetail>()
 
+// Tiempos cortos a propósito: para probar la pantalla de progreso en segundos, no en minutos.
+const STEP_MS = 2000
+
 export function listAnalyses(): components['schemas']['Analysis'][] {
-	return Array.from(store.values()).map(({ protections, vulnerabilities, errorMessage, ...analysis }) => analysis)
+	return Array.from(store.values()).map(({ protections: _protections, vulnerabilities: _vulnerabilities, errorMessage: _errorMessage, ...analysis }) => analysis)
 }
 
 export function createAnalysis(targetUrl: string): components['schemas']['Analysis'] {
@@ -18,7 +21,36 @@ export function createAnalysis(targetUrl: string): components['schemas']['Analys
 	}
 
 	store.set(analysis.id, analysis)
+	simulateProgress(analysis.id)
 	return analysis
+}
+
+// Sin esto, un análisis creado se queda en 'pending' para siempre: nada más
+// en este archivo cambia su estado una vez que ya existe.
+function simulateProgress(analysisId: string): void {
+	setTimeout(() => {
+		const current = store.get(analysisId)
+		if (!current) return // pudo eliminarse o nunca más consultarse; no hace falta seguir
+		store.set(analysisId, { ...current, status: 'running' })
+
+		setTimeout(() => {
+			const running = store.get(analysisId)
+			if (!running) return
+			store.set(analysisId, {
+				...running,
+				status: 'completed',
+				finishedAt: new Date().toISOString(),
+				protections: [{ type: 'waf', details: 'Cloudflare WAF detectado' }],
+				vulnerabilities: [
+					{
+						type: 'sql-injection',
+						severity: 'high',
+						description: 'Inyección SQL detectada en parámetro de búsqueda',
+					},
+				]
+			})
+		}, STEP_MS)
+	}, STEP_MS)
 }
 
 export function getAnalysis(analysisId: string): AnalysisDetail | undefined {
