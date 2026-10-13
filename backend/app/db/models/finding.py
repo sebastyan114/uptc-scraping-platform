@@ -3,6 +3,7 @@ from datetime import datetime,timezone
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
+
 from sqlalchemy.orm import Mapped, mapped_column,relationship
 
 from app.db.base import Base
@@ -14,6 +15,12 @@ class Finding(Base):
     "Analysis",
     back_populates="findings",
     )
+
+
+
+
+
+
     
     id: Mapped[uuid.UUID]=mapped_column(
         UUID(as_uuid=True),

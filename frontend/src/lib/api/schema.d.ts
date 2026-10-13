@@ -11,7 +11,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Listar el historial de análisis (RF20) */
+        get: operations["listAnalyses"];
         put?: never;
         /** Iniciar un nuevo análisis (RF06, RF09, RF23) */
         post: operations["createAnalysis"];
@@ -30,7 +31,8 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /** Consultar el detalle de un análisis */
+        get: operations["getAnalysis"];
         put?: never;
         post?: never;
         delete?: never;
@@ -97,6 +99,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    listAnalyses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista de análisis realizados */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Analysis"][];
+                };
+            };
+        };
+    };
     createAnalysis: {
         parameters: {
             query?: never;
@@ -133,6 +155,37 @@ export interface operations {
             };
             /** @description URL con formato inválido o bloqueada por la protección SSRF (RNF11) */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    getAnalysis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analysisId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Detalle del análisis */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisDetail"];
+                };
+            };
+            /** @description Análisis no encontrado */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

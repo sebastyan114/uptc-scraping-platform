@@ -1,4 +1,5 @@
 import uuid
+
 from datetime import datetime,timezone
 
 from sqlalchemy import DateTime, String, Text
@@ -59,6 +60,7 @@ class Analysis(Base):
         nullable=True,
     )
 
+
     #Carga las relaciones con una consulta relacionada
     findings: Mapped[list["Finding"]] = relationship(
     "Finding",
@@ -80,4 +82,3 @@ class Analysis(Base):
     back_populates="analysis",
     lazy="selectin",
 )
-    

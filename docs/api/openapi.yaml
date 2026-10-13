@@ -12,6 +12,18 @@ security: []   # MVP sin login: se declara explícito, no se deja ambiguo
 
 paths:
   /api/analyses:
+    get:
+      operationId: listAnalyses
+      summary: Listar el historial de análisis (RF20)
+      responses:
+        "200":
+          description: Lista de análisis realizados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Analysis"
     post:
       operationId: createAnalysis
       summary: Iniciar un nuevo análisis (RF06, RF09, RF23)

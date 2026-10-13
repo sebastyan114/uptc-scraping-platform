@@ -4,6 +4,7 @@ from datetime import datetime,timezone
 from sqlalchemy import DateTime, String, Text
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
+
 from sqlalchemy.orm import Mapped, mapped_column,relationship
 
 from app.db.base import Base
@@ -19,6 +20,7 @@ class ScanLog(Base):
     "Analysis",
     back_populates="scan_logs",
     )
+
     id: Mapped[uuid.UUID]=mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
