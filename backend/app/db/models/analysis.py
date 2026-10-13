@@ -1,11 +1,12 @@
 import uuid
-from datetime import datetime
+from datetime import datetime,timezone
 
 from sqlalchemy import DateTime, String, Text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column,relationship
 
 from app.db.base import Base
+from datetime import datetime
 
 
 class Analysis(Base):
@@ -57,4 +58,26 @@ class Analysis(Base):
         Text,
         nullable=True,
     )
+
+    #Carga las relaciones con una consulta relacionada
+    findings: Mapped[list["Finding"]] = relationship(
+    "Finding",
+    back_populates="analysis",
+    cascade="all, delete-orphan",
+    lazy="selectin",
+    )
+
+
+    scan_logs: Mapped[list["ScanLog"]] = relationship(
+    "ScanLog",
+    back_populates="analysis",
+    cascade="all, delete-orphan",
+    lazy="selectin",
+    )
+
+
+    protections: Mapped[list["Protection"]] = relationship(
+    back_populates="analysis",
+    lazy="selectin",
+)
     

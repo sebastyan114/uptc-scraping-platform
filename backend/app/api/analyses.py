@@ -1,14 +1,27 @@
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, HTTPException, status
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+
+from app.db.session import get_db
+from app.db.models.analysis import Analysis as AnalysisORM
+from app.db.models.finding import Finding
+from app.db.models.protection import Protection
+from app.db.models.scan_log import ScanLog
 from app.schemas.api import (
     Analysis,
     AnalysisDetail,
     AnalysisStatus,
     CreateAnalysisRequest,
 )
+
+
+
 
 router = APIRouter(
     prefix="/api/analyses",
@@ -22,24 +35,142 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
     summary="Nuevo analisis",
 )
-async def create_analysis(payload: CreateAnalysisRequest) -> Analysis:
+async def create_analysis(payload: CreateAnalysisRequest,db: AsyncSession = Depends(get_db),) -> Analysis:
     now = datetime.now(timezone.utc)
 
+#Construit una fila del postgres convertir la url al texto que valida
+    analysis = AnalysisORM(
+    
+    target_url=str(payload.targetUrl),
+    status=AnalysisStatus.pending.value, #Guardar la columna de texto en pending
+    created_at=now,
+    finished_at=None,
+    scan_mode="passive",
+)
+
+    db.add(analysis)
+
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    await db.refresh(analysis)
+
     return Analysis(
-        id=uuid4(),
+        id=analysis.id,
         targetUrl=payload.targetUrl,
-        status=AnalysisStatus.pending,
-        createdAt=now,
-        finishedAt=None,
+        status=AnalysisStatus(analysis.status),
+        createdAt=analysis.created_at,
+        finishedAt=analysis.finished_at,
     )
 
+
+
+
+@router.get(
+
+
+     "",
+    status_code=status.HTTP_200_OK,
+    summary="Consultar historial de analisis",
+)
+
+async def list_analyses(
+    page:int = Query(default=1,ge=1),
+    page_size: int = Query(default=20,ge=1,le=100),
+    db: AsyncSession=Depends(get_db),
+    
+):
+    
+    total = await db.scalar(
+        select(func.count())
+        .select_from(AnalysisORM)
+    )
+
+    result = await db.execute(
+    select(AnalysisORM)
+    .order_by(AnalysisORM.created_at.desc())
+    .offset((page - 1) * page_size)
+    .limit(page_size)
+    ) 
+
+    analyses=result.scalars().all()
+
+    return{
+        "items":[
+            {
+                "id":item.id,
+                "targetUrl": item.target_url,
+                "status":item.status,
+                "createdAt":item.created_at,
+                "finishedAt": item.finished_at,
+            }
+            for item in analyses
+        ],
+        "page":page,
+        "pageSize":page_size,
+        "total":total or 0,
+    }
+@router.get(
+    "/{analysisId}/results",
+    response_model=AnalysisDetail,
+    status_code=status.HTTP_200_OK,
+    summary="Consultar resultados de un análisis",
+)
 @router.get(
     "/{analysisId}",
     response_model=AnalysisDetail,
     status_code=status.HTTP_200_OK,
-    summary="Consultar  un análisis",
+    summary="Consultar un analisis",
 )
-async def get_analysis(analysisId: UUID) -> AnalysisDetail:
+
+async def get_analysis(analysisId: UUID,
+    db: AsyncSession = Depends(get_db),) -> AnalysisDetail:
+    result=await db.execute(
+        select(AnalysisORM).options(
+            selectinload(AnalysisORM.findings),
+            selectinload(AnalysisORM.protections),
+            selectinload(AnalysisORM.scan_logs),
+        )
+        .where(AnalysisORM.id==analysisId)
+    )
+    analysis=result.scalar_one_or_none()
+    
+    if analysis is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Analisis no encontrado",
+        )
+
+   
+
+    return AnalysisDetail(
+        id=analysis.id,
+        targetUrl=analysis.target_url,
+        status=analysis.status,  #garantizar que se cumpla el contrato
+        createdAt=analysis.created_at,
+        finishedAt=analysis.finished_at,
+        
+        protections=[
+        {
+            "type": protection.protection_type,
+            "details": protection.details,
+        }
+        for protection in analysis.protections
+        ],
+        vulnerabilities=[
+        {
+            "type": finding.finding_type,
+            "severity": finding.severity,
+            "description": finding.description,
+        }
+        for finding in analysis.findings
+    ],
+    errorMessage=analysis.error_message,
+    )
+
+    
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail={
