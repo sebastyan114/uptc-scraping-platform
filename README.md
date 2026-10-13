@@ -108,7 +108,7 @@ La documentación interactiva se puede consultar en:
 
 Base de datos y migraciones
 
-La estructura de PosgresSQL se administra con Alembic debido a la necesidad y posible modificacion de la base de datos sin afectar los datos 
+La estructura de PosgresSQL se administra con Alembic debido a la necesidad y posible modificacion de la base de datos sin afectar los datos
 
 ### Primera instalación
 
@@ -133,7 +133,3 @@ alembic upgrade head
 
 ### Verificar tablas
 docker compose exec postgres psql -U websec_user -d websec -c "\dt"
-
-
-
-

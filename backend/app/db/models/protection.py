@@ -4,7 +4,10 @@ from datetime import datetime,timezone
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+
+from sqlalchemy.orm import Mapped, mapped_column,relationship
+
+
 
 from app.db.base import Base
 
@@ -12,7 +15,13 @@ from app.db.base import Base
 class Protection(Base):
     __tablename__="protections"
 
-    
+
+    analysis: Mapped["Analysis"] = relationship(
+    "Analysis",
+    back_populates="protections",
+)
+
+
     id: Mapped[uuid.UUID]=mapped_column(
         UUID(as_uuid=True),
         primary_key=True,

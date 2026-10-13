@@ -23,11 +23,10 @@ async def run_analysis_job(
 
 )->None:
     async with AsyncSessionLocal() as db:
-        analysis_result=await db.execute( 
+        analysis_result= await db.execute(
             select(Analysis).where(Analysis.id==analysis_id)
         )
         analysis=analysis_result.scalar_one_or_none() #Se busca analisis por su ID
-
         job_result=await db.execute(
             select(Job).where(Job.id==job_id)
         )
@@ -49,15 +48,10 @@ async def run_analysis_job(
             for stage in STAGES:
                 analysis.current_stage=stage
                 await db.commit()
-                await asyncio.sleep(2) #Se espera reemplazar por llamadas reales 
-
+                await asyncio.sleep(2) #Se espera reemplazar por llamadas reales
             analysis.status="completed"
             analysis.current_stage="completed"
             analysis.finished_at=datetime.now(timezone.utc)
-
-            job.status="completed"
-            job.finished_at=datetime.now(timezone.utc)
-
             job.status="completed"
             job.finished_at=datetime.now(timezone.utc)
 
