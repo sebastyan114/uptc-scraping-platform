@@ -1,20 +1,23 @@
+from collections.abc import Sequence
+
+
 def build_command(
     *,
     binary: str = "nuclei",
-    target: str,
+    targets: Sequence[str],
     request_timeout_seconds: int,
     max_scan_seconds: int,
 ) -> list[str]:
     return [
         binary,
-        "-target", target,                          # único objetivo de esta ejecución
+        *(f"-target {target}" for target in targets), # cada objetivo como argumento separado
 
         # Formato de salida (compatible con el parser)
-        "-jsonl",                                   # un JSON por línea: permite leer en streaming
+        "-jsonl=true",                              # un JSON por línea: permite leer en streaming
         "-omit-raw=false",                          # incluir request/response en cada hallazgo
         "-omit-template=true",                      # no incluir el YAML del template (pesa mucho)
-        "-silent",                                  # stdout solo con resultados, sin banner ni logs
-        "-no-color",                                # sin códigos ANSI que corrompan el JSON
+        "-silent=true",                             # stdout solo con resultados, sin banner ni logs
+        "-no-color=true",                           # sin códigos ANSI que corrompan el JSON
 
         # Límites de tiempo
         "-timeout", str(request_timeout_seconds),   # por petición, en segundos

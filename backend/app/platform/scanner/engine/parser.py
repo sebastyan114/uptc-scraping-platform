@@ -49,21 +49,6 @@ def _build_evidence(raw: dict, limit: int) -> Evidence | None:
     return Evidence(request=request, response=response, extracted=extracted)
 
 
-def parse_finding(raw: dict, *, max_evidence_chars: int = 16_384) -> Finding:
-    """Convierte un resultado del motor de escaneo en un `Finding`.
-
-    Es el único punto que conoce el formato de salida del motor: las claves
-    literales ("template-id", "matched-at"...) pertenecen a ese formato.
-
-    Lanza ResultParseError si el resultado no es interpretable (falta el
-    identificador de la regla, tipos inesperados, valores inválidos).
-    """
-    try:
-        return _build_finding(raw, max_evidence_chars)
-    except (KeyError, TypeError, AttributeError, ValueError) as e:
-        raise ResultParseError(f"Resultado no interpretable: {e!r}") from e
-
-
 def _build_finding(raw: dict, max_evidence_chars: int) -> Finding:
     info = raw.get("info") or {}
     classification = info.get("classification") or {}
@@ -90,3 +75,18 @@ def _build_finding(raw: dict, max_evidence_chars: int) -> Finding:
         evidence=_build_evidence(raw, max_evidence_chars),
         detected_at=_parse_timestamp(raw.get("timestamp")),
     )
+
+
+def parse_finding(raw: dict, *, max_evidence_chars: int = 16_384) -> Finding:
+    """Convierte un resultado del motor de escaneo en un `Finding`.
+
+    Es el único punto que conoce el formato de salida del motor: las claves
+    literales ("template-id", "matched-at"...) pertenecen a ese formato.
+
+    Lanza ResultParseError si el resultado no es interpretable (falta el
+    identificador de la regla, tipos inesperados, valores inválidos).
+    """
+    try:
+        return _build_finding(raw, max_evidence_chars)
+    except (KeyError, TypeError, AttributeError, ValueError) as e:
+        raise ResultParseError(f"Resultado no interpretable: {e!r}") from e

@@ -3,12 +3,12 @@ import contextlib
 import json
 import logging
 import os
-import shutil
 import signal
-from collections.abc import AsyncIterator, Sequence
 from collections import deque
+from collections.abc import AsyncIterator, Sequence
 
-from ..errors import EngineNotFound, ScanFailed, ScanTimeout
+from app.core.errors import TimeoutExceededError
+from ..errors import ScanFailedError
 
 log = logging.getLogger(__name__)
 
@@ -86,20 +86,16 @@ class EngineRunner:
         consumidor tarda en procesar cada resultado.
 
         Lanza:
-          EngineNotFound  si el binario no existe.
-          ScanTimeout     si se supera `timeout`.
-          ScanFailed      si el motor termina con código distinto de 0.
+          TimeoutExceededError     si se supera `timeout`.
+          ScanFailedError          si el motor termina con código distinto de 0.
 
         Ante cualquier salida (éxito, error, timeout, cancelación o consumidor
         que abandona el iterador) el proceso y sus hijos se terminan.
         """
-        binary, *args = cmd
-        if shutil.which(binary) is None:
-            raise EngineNotFound(f"No se encuentra el binario: {binary}")
 
         env = {k: os.environ[k] for k in _ENV_WHITELIST if k in os.environ}
         proc = await asyncio.create_subprocess_exec(
-            binary, *args,
+            *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             limit=_LINE_LIMIT,
@@ -122,7 +118,7 @@ class EngineRunner:
         def remaining() -> float:
             left = deadline - loop.time()
             if left <= 0:
-                raise ScanTimeout(timeout_msg)
+                raise TimeoutExceededError(timeout_msg)
             return left
 
         try:
@@ -131,7 +127,7 @@ class EngineRunner:
                 try:
                     line = await asyncio.wait_for(proc.stdout.readline(), left)
                 except TimeoutError:
-                    raise ScanTimeout(timeout_msg) from None
+                    raise TimeoutExceededError(timeout_msg) from None
                 except ValueError:
                     log.warning("Línea superior a %d bytes descartada", _LINE_LIMIT)
                     continue
@@ -149,7 +145,7 @@ class EngineRunner:
                 try:
                     code = await asyncio.wait_for(proc.wait(), remaining())
                 except TimeoutError:
-                    raise ScanTimeout(timeout_msg) from None
+                    raise TimeoutExceededError(timeout_msg) from None
 
             if code != 0:
                 # stderr solo se necesita para el diagnóstico; no se espera en un éxito
@@ -157,7 +153,7 @@ class EngineRunner:
                 if grace > 0:
                     with contextlib.suppress(TimeoutError):
                         await asyncio.wait_for(drain, grace)
-                raise ScanFailed(code, "\n".join(stderr_tail))
+                raise ScanFailedError(code, "\n".join(stderr_tail))
         finally:
             if proc.returncode is None:
                 self._schedule_shutdown(proc, drain)
