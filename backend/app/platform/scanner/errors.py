@@ -1,15 +1,7 @@
-from secplatform.core.errors import ExecutionTimeout, PlatformError
+from app.core.errors import AppError
 
 
-class ScanError(PlatformError):
-    """Errores propios del módulo scanner."""
-
-
-class EngineNotFound(ScanError):
-    """El binario del motor no existe o no es ejecutable. Error de despliegue: no reintentar."""
-
-
-class ScanFailed(ScanError):
+class ScanFailedError(AppError):
     """El motor terminó con código de salida distinto de 0.
 
     `detail` contiene las últimas líneas de stderr, solo para logs.
@@ -22,9 +14,5 @@ class ScanFailed(ScanError):
         self.detail = detail
 
 
-class ScanTimeout(ScanError, ExecutionTimeout):
-    """Se superó el tiempo máximo por objetivo. Los hallazgos previos ya fueron entregados."""
-
-
-class ResultParseError(ScanError):
+class ResultParseError(AppError):
     """Un resultado del motor no se pudo parsear correctamente."""

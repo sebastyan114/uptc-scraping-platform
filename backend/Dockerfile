@@ -43,7 +43,7 @@ ENV HOME=/home/app
 
 
 # Descarga de templates de nuclei en su ubicación por defecto ($HOME/nuclei-templates)
-RUN nuclei -update-templates -silent
+RUN nuclei -update-templates -v
 
 
 
