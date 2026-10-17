@@ -4,18 +4,20 @@ services:
       context: ./backend
     container_name: backend
     ports:
-      - "${BACKEND_PORT:-8000}:${8000}"
+      - "${BACKEND_PORT:-8000}:8000"
     environment:
       APP_NAME: ${APP_NAME}
       APP_VERSION: ${APP_VERSION}
       APP_ENV: ${APP_ENV}
-      APP_PORT: ${8000}
+      APP_PORT: 8000
 
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      QRANT_URL: ${QRANT_URL}
-      QRANT_COLLECTION: ${QRANT_COLLECTION}
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION}
 
-      SCANNER_ENGINE_BIN: ${SCANNER_ENGINE_BIN}
+      ZAP_URL: http://zap:8080
+      ZAP_API_KEY: ${ZAP_API_KEY}
+
       SCANNER_MAX_SCAN_SECONDS: ${SCANNER_MAX_SCAN_SECONDS}
       SCANNER_REQUEST_TIMEOUT_SECONDS: ${SCANNER_REQUEST_TIMEOUT_SECONDS}
       SCANNER_MAX_TARGETS: ${SCANNER_MAX_TARGETS}
@@ -23,12 +25,12 @@ services:
       SCANNER_ALLOW_PRIVATE_TARGETS: ${SCANNER_ALLOW_PRIVATE_TARGETS}
     volumes:
       - ./backend:/app
-      - nuclei_templates:/home/app/nuclei-templates
-      - ./nuclei/config/config.yaml:/home/app/.config/nuclei/nuclei.config.yaml:ro
     depends_on:
       postgres:
         condition: service_healthy
       qdrant:
+        condition: service_started
+      zap:
         condition: service_started
     networks:
       - app_network
@@ -52,19 +54,38 @@ services:
     networks:
       - app_network
 
+  zap:
+    image: zaproxy/zap-stable:2.17.0
+    command: >
+      zap.sh -daemon -host 0.0.0.0 -port 8080
+      -config api.key=${ZAP_API_KEY}
+      -config api.addrs.addr.name=.*
+      -config api.addrs.addr.regex=true
+    mem_limit: 2g
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/JSON/core/view/version/?apikey=${ZAP_API_KEY}"]
+      interval: 10s
+      retries: 12
+    networks:
+      - app_network
+
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant
+    healthcheck:
+       test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+       interval: 5s
+       timeout: 5s
+       retries: 10
     ports:
       - "${QDRANT_PORT:-6333}:6333"
-      - "${QDRANT_METRICS_PORT:-6334}:6334"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
       - app_network
 
 volumes:
-  nuclei_templates:
   postgres_data:
   qdrant_data:
 

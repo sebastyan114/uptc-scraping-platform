@@ -1,48 +1,42 @@
-from datetime import datetime, timezone
+from enum import StrEnum
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict
 
-from app.core.models.evidence import Evidence
-from app.core.models.severity import Severity
+
+class Risk(StrEnum):
+    HIGH = "High"
+    MEDIUM = "Medium"
+    LOW = "Low"
+    INFO = "Informational"
+
+
+RISK_RANK = {Risk.HIGH: 0, Risk.MEDIUM: 1, Risk.LOW: 2, Risk.INFO: 3}
+
+
+class Confidence(StrEnum):
+    FALSE_POSITIVE = "False Positive"
+    LOW = "Low"
+    MEDIUM = "Medium"
+    HIGH = "High"
+    CONFIRMED = "Confirmed"
 
 
 class Finding(BaseModel):
-    """Vulnerabilidad detectada en un objetivo.
+    model_config = ConfigDict(frozen=True)
 
-    Atributos:
-        fingerprint:  Identificador estable del hallazgo entre ejecuciones. Sirve para
-                      deduplicar y comparar scans (nuevo, persistente, resuelto).
-        rule_id:      Identificador de la regla que lo detectó.
-        name:         Título legible de la vulnerabilidad.
-        severity:     Nivel de gravedad.
-        description:  Explicación de la vulnerabilidad.
-        remediation:  Cómo corregirla.
-        cve_ids:      CVEs asociados, normalizados a mayúsculas. Puede estar vacío.
-        cvss_score:   Puntuación CVSS (0.0 a 10.0), si existe.
-        host:         Host afectado.
-        matched_at:   URL exacta donde se detectó.
-        evidence:     Prueba técnica, opcional (ver `Evidence`).
-        detected_at:  Momento de la detección, en UTC.
-    """
-
-    fingerprint: str
-    rule_id: str
-
+    alert_ref: str
     name: str
-    severity: Severity
-    description: str | None = None
-    remediation: str | None = None
-    cve_ids: list[str] = Field(default_factory=list)
-    cvss_score: float | None = None
+    risk: Risk
+    confidence: Confidence
+    description: str
+    solution: str | None = None
+    cwe: int | None = None
 
-    host: str
-    matched_at: str
+    url: str
+    method: str | None = None
+    param: str | None = None
+    attack: str | None = None
+    evidence: str | None = None
 
-    evidence: Evidence | None = None
-    detected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    @field_validator("cve_ids")
-    @classmethod
-    def _uppercase_cves(cls, v: list[str]) -> list[str]:
-        """Normaliza los IDs a mayúsculas, sin importar la fuente."""
-        return [x.upper() for x in v]
+    additional_info: str | None = None
+    references: list[str] = []

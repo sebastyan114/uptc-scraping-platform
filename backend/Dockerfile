@@ -1,16 +1,4 @@
-# Etapa de compilación: se usa únicamente para extraer el binario de nuclei
-FROM projectdiscovery/nuclei:latest AS nuclei
-
-# Imagen final de la aplicación
 FROM python:3.12-slim
-
-# Certificados raíz requeridos para validar conexiones HTTPS salientes
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copia del binario de nuclei desde la etapa de compilación
-COPY --from=nuclei /usr/local/bin/nuclei /usr/local/bin/nuclei
 
 # Evita la generación de archivos .pyc y fuerza salida sin buffer en logs
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -26,9 +14,6 @@ RUN useradd -m -u 1000 app \
 USER app
 ENV HOME=/home/app
 WORKDIR /app
-
-# Descarga de templates de nuclei en su ubicación por defecto ($HOME/nuclei-templates)
-RUN nuclei -update-templates -v
 
 # Instalación de dependencias (capa separada del código para aprovechar cache de build)
 COPY --chown=app:app requirements.txt .
