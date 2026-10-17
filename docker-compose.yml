@@ -4,16 +4,16 @@ services:
       context: ./backend
     container_name: backend
     ports:
-      - "${BACKEND_PORT:-8000}:${8000}"
+      - "${BACKEND_PORT:-8000}:8000"
     environment:
       APP_NAME: ${APP_NAME}
       APP_VERSION: ${APP_VERSION}
       APP_ENV: ${APP_ENV}
-      APP_PORT: ${8000}
+      APP_PORT: 8000
 
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      QRANT_URL: ${QRANT_URL}
-      QRANT_COLLECTION: ${QRANT_COLLECTION}
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION}
 
       SCANNER_ENGINE_BIN: ${SCANNER_ENGINE_BIN}
       SCANNER_MAX_SCAN_SECONDS: ${SCANNER_MAX_SCAN_SECONDS}
@@ -55,9 +55,14 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant
+    healthcheck:
+       test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+       interval: 5s
+       timeout: 5s
+       retries: 10
     ports:
       - "${QDRANT_PORT:-6333}:6333"
-      - "${QDRANT_METRICS_PORT:-6334}:6334"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
