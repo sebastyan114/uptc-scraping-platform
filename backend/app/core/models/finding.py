@@ -1,28 +1,10 @@
-from enum import StrEnum
+from dataclasses import dataclass
 
-from pydantic import BaseModel, ConfigDict
-
-
-class Risk(StrEnum):
-    HIGH = "High"
-    MEDIUM = "Medium"
-    LOW = "Low"
-    INFO = "Informational"
+from .enums import Risk, Confidence
 
 
-RISK_RANK = {Risk.HIGH: 0, Risk.MEDIUM: 1, Risk.LOW: 2, Risk.INFO: 3}
-
-
-class Confidence(StrEnum):
-    FALSE_POSITIVE = "False Positive"
-    LOW = "Low"
-    MEDIUM = "Medium"
-    HIGH = "High"
-    CONFIRMED = "Confirmed"
-
-
-class Finding(BaseModel):
-    model_config = ConfigDict(frozen=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Finding:
 
     alert_ref: str
     name: str
@@ -39,4 +21,4 @@ class Finding(BaseModel):
     evidence: str | None = None
 
     additional_info: str | None = None
-    references: list[str] = []
+    references: tuple[str, ...] = ()
