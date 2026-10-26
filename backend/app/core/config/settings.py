@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     qdrant_url: str
     qdrant_collection: str = "analysis_embeddings"
 
+    zap_url: str
+    zap_api_key: SecretStr
+
 
 @lru_cache
 def get_settings() -> Settings:
